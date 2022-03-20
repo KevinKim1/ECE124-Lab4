@@ -52,13 +52,13 @@ END COMPONENT;
 -- Add any Other Components here
 ------------------------------------------------------------------
 component Bidir_shift_reg port 
-	(	
+(	
 	CLK				: in  std_logic := '0';
 	RESET 			: in  std_logic := '0';
 	CLK_EN			: in  std_logic := '0';
 	LEFT0_RIGHT1	: in  std_logic := '0';
 	REG_BITS			: out std_logic_vector(7 downto 0)
-	);
+);
 end component Bidir_shift_reg;
 
 component U_D_Bin_Counter4bit port 
@@ -70,6 +70,13 @@ component U_D_Bin_Counter4bit port
 	COUNTER_BITS	: out std_logic_vector(7 downto 0)
 );
 end component U_D_Bin_Counter4bit;
+
+component Inverter port 
+(
+	in_1, in_2, in_3, in_4   		: in std_logic;	-- Single bit inputs
+	out_1, out_2, out_3, out_4 	: out std_logic   -- Inverted single bit outputs
+);
+end Inverter;
 
 ------------------------------------------------------------------
 -- provided signals
@@ -87,7 +94,12 @@ BEGIN
 clk_in <= clk;
 
 Clock_Selector: Clock_source port map(SIM_FLAG, clk_in, clock);
+
+Inverter_Block: Inverter port map(pb_n(3), pb_n(2), pb_n(1),  pb_n(0),
+											 RESET,   motion,  extender, grappler);
+
+
 Shift_Register: Bidir_shift_reg port map(clock, NOT(pb_n(0)), sw(0), sw(1), leds(7 downto 0));
---UD_Counter:		 U_D_Bin_Counter4bit port map(clock, NOT(pb_n(0)), sw(0), sw(1), leds(7 downto 0));
+UD_Counter:		 U_D_Bin_Counter4bit port map(clock, NOT(pb_n(0)), sw(0), sw(1), leds(7 downto 0));
 
 END Circuit;
