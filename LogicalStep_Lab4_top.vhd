@@ -76,7 +76,7 @@ component Inverter port
 	in_1, in_2, in_3, in_4   		: in std_logic;	-- Single bit inputs
 	out_1, out_2, out_3, out_4 	: out std_logic   -- Inverted single bit outputs
 );
-end Inverter;
+end component Inverter;
 
 ------------------------------------------------------------------
 -- provided signals
@@ -86,8 +86,8 @@ constant SIM_FLAG : boolean := TRUE; -- set to FALSE when compiling for FPGA dow
 ------------------------------------------------------------------	
 ------------------------------------------------------------------	
 -- Create any additional internal signals to be used
-signal clk_in, clock	: std_logic;
-
+signal clk_in, clock						     : std_logic; -- Internal clock
+signal RESET, motion, extender, grappler : std_logic; -- RAC modes
 
 	
 BEGIN
@@ -95,9 +95,13 @@ clk_in <= clk;
 
 Clock_Selector: Clock_source port map(SIM_FLAG, clk_in, clock);
 
+-- Invert RAC mode pins
 Inverter_Block: Inverter port map(pb_n(3), pb_n(2), pb_n(1),  pb_n(0),
 											 RESET,   motion,  extender, grappler);
 
+-- Instance of XY motion controller
+
+											 
 
 Shift_Register: Bidir_shift_reg port map(clock, NOT(pb_n(0)), sw(0), sw(1), leds(7 downto 0));
 UD_Counter:		 U_D_Bin_Counter4bit port map(clock, NOT(pb_n(0)), sw(0), sw(1), leds(7 downto 0));
