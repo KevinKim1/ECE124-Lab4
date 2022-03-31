@@ -25,7 +25,7 @@ signal current_state, next_state 	: state_names; 				-- XY motion states
 
 begin
 
-Register_Section: process (clk_input, reset, next_state) is		
+Register_Section: process (clk_input, reset, next_state)	
 begin 
 	if (reset = '1') then						-- Reset controller and enter initial state
 		current_state <= s_initial;
@@ -36,7 +36,7 @@ begin
 	
 end process;
 
-Transition_Section: process (X_LT, X_EQ, X_GT, Y_LT, Y_EQ, Y_GT, current_state, motion, extender_out) 
+Transition_Section: process (X_LT, X_EQ, X_GT, Y_LT, Y_EQ, Y_GT, current_state, motion, extender_out)
 begin
     case current_state is -- Maps to other states
 	 
@@ -46,8 +46,8 @@ begin
 				if ((X_EQ = '1') AND (Y_EQ = '1')) then
 					next_state <= s_stop;
 		
-				-- Motion is triggered, RAC has not reached XY target pos, and extender is not out
-				elsif ((motion = '0') AND ((X_EQ = '0') OR (Y_EQ = '0'))) then
+				-- RAC is updated to new XY target pos, and extender is not out
+				else
 					next_state <= s_motion;		
 				end if; 
 				
@@ -68,17 +68,21 @@ begin
 				
          when s_stop =>
 			
-				-- Extender is not extending, motion is on, and RAC is not at both target XY pos
-				if ((motion = '1') AND ((X_EQ = '0') OR (Y_EQ = '0')) AND (extender_out = '0')) then
+				-- RAC, no ext
+				------------------------------------------------------------------------------------------ CHECK MOTION/EXTENDER_OUT
+				if ((X_EQ = '0') OR (Y_EQ = '0')) then
 					next_state <= s_motion;
-				
-				--------------------------------------------------------------------------------------------- CHECK STOP BEHAVIOR originally else
-				-- Extender is extending or motion is off or RAC is at target XY pos
-				elsif ((motion = '0') AND (X_EQ = '1') AND (Y_EQ = '1') AND (extender_out = '1')) then
+			
+				-- No RAC, no ext
+				elsif ((X_EQ = '1') AND (Y_EQ = '1') AND (extender_out = '0')) then
 					next_state <= s_stop;
 				
-				-- Extender is extending, motion is on, and RAC is still at target XY pos
-				elsif ((motion = '1') AND (X_EQ = '1') AND (Y_EQ = '1') AND (extender_out='1')) then
+				-- No RAC, ext
+				elsif ((X_EQ = '1') AND (Y_EQ = '1') AND (extender_out='1')) then
+					next_state <= s_stop;
+					
+				-- No RAC, ext, but motion
+				elsif ((X_EQ = '1') AND (Y_EQ = '1') AND (extender_out = '1') AND (motion = '1')) then
 					next_state <= s_error;
 					
 				end if;
@@ -113,66 +117,39 @@ begin
 				up_down_y <= '0';
 				
          when s_motion =>		
-				----------------------------------------------------- ABUNDANCE CASE
-				-- Extender should not be enabled during motion
+				
 				extender_en <= '0';
 				error <= '0';
-				Capture_XY <= '0';
-				
-				-- Clock and up/down control during motion
-				if((X_LT = '1') or (X_GT = '1')) then
-					clk_en_x <= '1';
-					up_down_x <= X_LT;
-					
-				-- Do not send send clock signal to binary counter if not in motion or X target is reached
-				else
+				if (motion = '1') then
+					Capture_XY <= '1';
 					clk_en_x <= '0';
-					up_down_x <= '0';
-				end if;
-				
-				-- Keep XY separate since if one reaches target pos, the other must be in motion if not yet reached
-				if((Y_LT = '1') or (Y_GT = '1')) then
-					clk_en_y <= '1';
-					up_down_y <= Y_LT;
-					
-				else
 					clk_en_y <= '0';
+					up_down_x <= '0';
 					up_down_y <= '0';
+					
+				else	
+					Capture_XY <= '0';
+					clk_en_x <= '1';
+					clk_en_y <= '1';
+					up_down_x <= X_LT;
+					up_down_y <= Y_LT;					
+					
 				end if;
 				
-				-------------------------------------------- CHECK IF ERROR LED SHOULD BE 1 HERE EVER
 				
          when s_stop =>		
-				-------------------------------------------- ABUNDANCE CASE
+				
+				extender_en <= '1';
+				error <= '0';
 				clk_en_x <= '0';
 				clk_en_y <= '0';
 				up_down_x <= '0';
 				up_down_y <= '0';
 				
-				-- Update Capture_XY signal after above case
-				if ((extender_out = '0') AND (motion = '1')) then
-					extender_en <= '0';
+				if (extender_out = '1') then
 					Capture_XY <= '0';
-					error <= '0';
-				
-				---------------------------------------------------------------------- DOUBLE CHECK THIS "REST" CASE originally else
-				-- Extender extending or not extending with no motion trigger
-				elsif ((extender_out = '1') AND (motion = '0')) then
-					extender_en <= '1';
-					Capture_XY <= '0';
-					error <= '0';
-				
-				-- Extender extending with motion trigger
-				elsif ((extender_out = '1') AND (motion = '1')) then
-					extender_en <= '1';
-					Capture_XY <= '0';
-					error <= '1';						
-			
-				-- Extender not extending with motion trigger
-				elsif ((extender_out = '0') AND (motion = '1')) then
-					extender_en <= '0';
+				elsif (motion = '1') then
 					Capture_XY <= '1';
-					error <= '0';
 				end if;
 				
          when s_error =>		
