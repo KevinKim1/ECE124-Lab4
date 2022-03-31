@@ -73,10 +73,27 @@ end component U_D_Bin_Counter4bit;
 
 component Inverter port 
 (
-	in_1, in_2, in_3, in_4   		: in std_logic;	-- Single bit inputs
-	out_1, out_2, out_3, out_4 	: out std_logic   -- Inverted single bit outputs
+	in_1, in_2, in_3, in_4   		: in std_logic;
+	out_1, out_2, out_3, out_4 	: out std_logic   
 );
 end component Inverter;
+
+component Position_Register port 
+(	
+	input_pos		: in  std_logic_vector(3 downto 0);		
+	CLK				: in  std_logic;								
+	ENABLE  			: in  std_logic;								
+	RESET 			: in  std_logic;								
+	output_pos		: out std_logic_vector(3 downto 0)		
+);
+end component Position_Register;
+
+component Compx4 port
+(
+	a_in_4, b_in_4   			: in  std_logic_vector(3 downto 0);	 
+	a_gt_b, a_eq_b, a_lt_b 	: out std_logic	  						
+);
+end component Compx4;
 
 ------------------------------------------------------------------
 -- provided signals
@@ -86,12 +103,18 @@ constant SIM_FLAG : boolean := TRUE; -- set to FALSE when compiling for FPGA dow
 ------------------------------------------------------------------	
 ------------------------------------------------------------------	
 -- Create any additional internal signals to be used
-signal clk_in, clock						     : std_logic; -- Internal clock
-signal RESET, motion, extender, grappler : std_logic; -- RAC modes
-
+signal clk_in, clock						     : std_logic; 		-- Internal clock
+signal RESET, motion, extender, grappler : std_logic; 		-- RAC modes
+signal X_target, Y_target 					  : std_logic_vector(3 downto 0);	-- New target XY positions
+signal XLT, XEQ, XGT, YLT, YEQ, YGT		  : std_logic;			-- XY position comparison outputs
+signal reg_en, ext_en						  : std_logic;			-- Enable signal for position registers and extender
+signal clk_x, clk_y							  : std_logic;			-- Clock signal for binary counters
+signal x_up_down, y_up_down				  : std_logic;			-- Increment or decrement signal for binary counters
 	
 BEGIN
 clk_in <= clk;
+X_target <= sw(7 downto 4);
+Y_target <= sw(3 downto 0);
 
 Clock_Selector: Clock_source port map(SIM_FLAG, clk_in, clock);
 
@@ -100,10 +123,23 @@ Inverter_Block: Inverter port map(pb_n(3), pb_n(2), pb_n(1),  pb_n(0),
 											 RESET,   motion,  extender, grappler);
 
 -- Instance of XY motion controller
+XY_Controller: XY_Motion port map( clock, RESET, motion, <extender out from extender>,
+											  XLT, XEQ, XGT, YLT, YEQ, YGT,
+											  reg_en, clk_x, clk_y, 
+											  x_up_down, y_up_down,
+											  ext_en, leds(0));
 
-											 
+-- Compare target XY position with current XY position
+X_Comparator: Compx4 port map(xPOS, xreg, XGT, XEQ, XLT);      
+Y_Comparator: Compx4 port map(yPOS, yreg, YGT, YEQ, YLT);                             
 
-Shift_Register: Bidir_shift_reg port map(clock, NOT(pb_n(0)), sw(0), sw(1), leds(7 downto 0));
-UD_Counter:		 U_D_Bin_Counter4bit port map(clock, NOT(pb_n(0)), sw(0), sw(1), leds(7 downto 0));
+-- For storing and updating target XY position
+X_Target_Position: Position_Register port map( X_target, clock, reg_en, RESET, xreg);
+Y_Target_Position: Position_Register port map( Y_target, clock, reg_en, RESET, yreg);
+
+
+-- TODO
+Shift_Register: Bidir_shift_reg port map(clock, --NOT(pb_n(0)), sw(0), sw(1), leds(7 downto 0));
+UD_Counter:		 U_D_Bin_Counter4bit port map(clock, --NOT(pb_n(0)), sw(0), sw(1), leds(7 downto 0));
 
 END Circuit;
