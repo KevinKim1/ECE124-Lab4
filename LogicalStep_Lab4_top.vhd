@@ -95,6 +95,31 @@ component Compx4 port
 );
 end component Compx4;
 
+component Extender port
+(
+	clk_input, reset, extender, extender_en		 : IN std_logic;
+	ext_pos												    : IN std_logic_vector(5 downto 2);
+	extender_out, grappler_en, clk_en, left_right : OUT std_logic
+);
+end component Extender;
+
+component Extender_shift port
+(	
+	clk				: in  std_logic;
+	reset 			: in  std_logic;
+	clk_en			: in  std_logic;
+	left_right	   : in  std_logic;
+	ext_pos			: out std_logic_vector(5 downto 2)
+);
+END component Extender_shift;
+
+component Grappler port
+(
+	clk_input, reset, grappler, grappler_en	: IN std_logic;
+	grappler_on											: OUT std_logic
+);
+END component Grappler;
+
 ------------------------------------------------------------------
 -- provided signals
 ------------------------------------------------------------------
@@ -110,6 +135,12 @@ signal XLT, XEQ, XGT, YLT, YEQ, YGT		  : std_logic;			-- XY position comparison 
 signal reg_en, ext_en						  : std_logic;			-- Enable signal for position registers and extender
 signal clk_x, clk_y							  : std_logic;			-- Clock signal for binary counters
 signal x_up_down, y_up_down				  : std_logic;			-- Increment or decrement signal for binary counters
+
+signal ext_pos									  : std_logic_vector(5 downto 2);
+signal clock_ext								  : std_logic;
+signal left_right								  : std_logic;
+signal grappler_en							  : std_logic;
+signal extender_out							  : std_logic;
 	
 BEGIN
 clk_in <= clk;
@@ -123,20 +154,28 @@ Inverter_Block: Inverter port map(pb_n(3), pb_n(2), pb_n(1),  pb_n(0),
 											 RESET,   motion,  extender, grappler);
 
 -- Instance of XY motion controller
-XY_Controller: XY_Motion port map( clock, RESET, motion, <extender out from extender>,
+XY_Controller: XY_Motion port map( clock, RESET, motion, extender_out,
 											  XLT, XEQ, XGT, YLT, YEQ, YGT,
 											  reg_en, clk_x, clk_y, 
 											  x_up_down, y_up_down,
 											  ext_en, leds(0));
 
 -- Compare target XY position with current XY position
-X_Comparator: Compx4 port map(xPOS, xreg, XGT, XEQ, XLT);      
-Y_Comparator: Compx4 port map(yPOS, yreg, YGT, YEQ, YLT);                             
+X_Comparator: Compx4 port map(xPOS, xreg, XGT, XEQ, XLT);
+Y_Comparator: Compx4 port map(yPOS, yreg, YGT, YEQ, YLT);
 
 -- For storing and updating target XY position
 X_Target_Position: Position_Register port map( X_target, clock, reg_en, RESET, xreg);
 Y_Target_Position: Position_Register port map( Y_target, clock, reg_en, RESET, yreg);
 
+-- Instance of Extender
+Extender: Extender port map(clock, RESET, extender, ext_en, ext_pos);
+
+-- Bidir shift register to show status of extender
+Extender_shift: Extender_shift port map(clock, RESET, clock_ext, left_right, ext_pos);
+
+-- Instance of Grappler
+Grappler: Grappler port map(clock, RESET, grappler, grappler_en);
 
 -- TODO
 Shift_Register: Bidir_shift_reg port map(clock, --NOT(pb_n(0)), sw(0), sw(1), leds(7 downto 0));
