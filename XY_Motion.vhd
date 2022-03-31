@@ -42,17 +42,13 @@ begin
 	 
          when s_initial =>	
 				
-				-- Motion is triggered, RAC has not reached XY target pos, and extender is not out
-				if (falling_edge(motion) AND ((X_EQ = '0') OR (Y_EQ = '0'))) then
-					next_state <= s_motion;
-					
 				-- RAC reached target pos, motion button independant
-				elsif ((X_EQ = '1') AND (Y_EQ = '1')) then
+				if ((X_EQ = '1') AND (Y_EQ = '1')) then
 					next_state <= s_stop;
-					
-				-- Handle hardware-related corner case, just remain in initial state
-				else
-					next_state <= s_initial;
+		
+				-- Motion is triggered, RAC has not reached XY target pos, and extender is not out
+				elsif ((motion = '0') AND ((X_EQ = '0') OR (Y_EQ = '0'))) then
+					next_state <= s_motion;		
 				end if; 
 				
 			when s_motion =>
@@ -73,16 +69,18 @@ begin
          when s_stop =>
 			
 				-- Extender is not extending, motion is on, and RAC is not at both target XY pos
-				if (falling_edge(motion) AND ((X_EQ = '0') OR (Y_EQ = '0')) AND (extender_out = '0')) then
+				if ((motion = '1') AND ((X_EQ = '0') OR (Y_EQ = '0')) AND (extender_out = '0')) then
 					next_state <= s_motion;
 				
+				--------------------------------------------------------------------------------------------- CHECK STOP BEHAVIOR originally else
+				-- Extender is extending or motion is off or RAC is at target XY pos
+				elsif ((motion = '0') AND (X_EQ = '1') AND (Y_EQ = '1') AND (extender_out = '1')) then
+					next_state <= s_stop;
+				
 				-- Extender is extending, motion is on, and RAC is still at target XY pos
-				elsif ((rising_edge(motion) or motion = '1') AND (X_EQ = '1') AND (Y_EQ = '1') AND (extender_out='1')) then
+				elsif ((motion = '1') AND (X_EQ = '1') AND (Y_EQ = '1') AND (extender_out='1')) then
 					next_state <= s_error;
 					
-				-- Extender is extending or motion is off or RAC is at target XY pos
-				else
-					next_state <= s_stop;
 				end if;
 				
          when s_error =>	
@@ -151,28 +149,29 @@ begin
 				up_down_x <= '0';
 				up_down_y <= '0';
 				
-				-- Extender extending with motion trigger
-				if((extender_out = '1') AND rising_edge(motion)) then
-					Capture_XY <= '0';
-					error <= '1';
-					
-				-- Extender not extending with motion trigger
-				elsif((extender_out = '0') AND rising_edge(motion)) then
+				-- Update Capture_XY signal after above case
+				if ((extender_out = '0') AND (motion = '1')) then
 					extender_en <= '0';
-					Capture_XY <= '1';
+					Capture_XY <= '0';
 					error <= '0';
 				
-				-- Update Capture_XY signal after above case
-				elsif((extender_out = '0') AND (motion = '1')) then
-					extender_en <= '0';
-					Capture_XY <= '0';
-					error <= '0';
-					
-					-------------------------------------------- DOUBLE CHECK THIS "REST" CASE
+				---------------------------------------------------------------------- DOUBLE CHECK THIS "REST" CASE originally else
 				-- Extender extending or not extending with no motion trigger
-				else
+				elsif ((extender_out = '1') AND (motion = '0')) then
 					extender_en <= '1';
 					Capture_XY <= '0';
+					error <= '0';
+				
+				-- Extender extending with motion trigger
+				elsif ((extender_out = '1') AND (motion = '1')) then
+					extender_en <= '1';
+					Capture_XY <= '0';
+					error <= '1';						
+			
+				-- Extender not extending with motion trigger
+				elsif ((extender_out = '0') AND (motion = '1')) then
+					extender_en <= '0';
+					Capture_XY <= '1';
 					error <= '0';
 				end if;
 				

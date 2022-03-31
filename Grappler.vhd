@@ -41,7 +41,7 @@ END PROCESS;
 
 -- TRANSITION LOGIC PROCESS
 
-Transition_Section: PROCESS (extender, extender_en, current_state) 
+Transition_Section: PROCESS (grappler, grappler_en, current_state) 
 
 BEGIN
     CASE current_state IS

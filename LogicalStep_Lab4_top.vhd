@@ -138,12 +138,12 @@ component Extender_shift port
 );
 END component Extender_shift;
 
-component Grappler_inst port
+component Grappler port
 (
 	clk_input, reset, grappler, grappler_en	: IN std_logic;
 	grappler_on											: OUT std_logic
 );
-END component Grappler_inst;
+END component Grappler;
 
 ------------------------------------------------------------------
 -- provided signals
@@ -153,13 +153,14 @@ constant SIM_FLAG : boolean := TRUE; -- set to FALSE when compiling for FPGA dow
 ------------------------------------------------------------------	
 ------------------------------------------------------------------	
 -- Create any additional internal signals to be used
-signal clk_in, clock						     : std_logic; 							-- Internal clock
-signal RESET, motion, extender, grappler : std_logic; 							-- RAC modes
-signal X_target, Y_target 					  : std_logic_vector(3 downto 0);	-- New target XY positions
-signal XLT, XEQ, XGT, YLT, YEQ, YGT		  : std_logic;								-- XY position comparison outputs
-signal reg_en, ext_en, grap_en			  : std_logic;								-- Enable signal for position registers, extender, and grappler
-signal clk_x, clk_y							  : std_logic;								-- Clock signal for binary counters
-signal x_up_down, y_up_down				  : std_logic;								-- Increment or decrement signal for binary counters
+signal clk_in, clock						  		: std_logic; 							-- Internal clock
+signal RESET, motion,
+		 extender_press, grappler_press 		: std_logic; 							-- RAC modes
+signal X_target, Y_target 					  	: std_logic_vector(3 downto 0);	-- New target XY positions
+signal XLT, XEQ, XGT, YLT, YEQ, YGT		  	: std_logic;								-- XY position comparison outputs
+signal reg_en, ext_en, grap_en			  	: std_logic;								-- Enable signal for position registers, extender, and grappler
+signal clk_x, clk_y							  	: std_logic;								-- Clock signal for binary counters
+signal x_up_down, y_up_down				  	: std_logic;								-- Increment or decrement signal for binary counters
 
 signal X_pos, Y_pos		: std_logic_vector(3 downto 0); 	-- Current XY position output from binary counters
 signal X_reg, Y_reg		: std_logic_vector(3 downto 0);  -- Updated XY position output from position registers
@@ -188,7 +189,7 @@ Clock_Selector: Clock_source port map(SIM_FLAG, clk_in, clock);
 
 -- Invert RAC mode pins
 Inverter_Block: Inverter port map(pb_n(3), pb_n(2), pb_n(1),  pb_n(0),
-											 RESET,   motion,  extender, grappler);
+											 RESET,   motion,  extender_press, grappler_press);
 
 -- Instance of XY motion controller
 XY_Controller: XY_Motion port map( clock, RESET, motion, ext_out,
@@ -210,13 +211,13 @@ X_Target_Position: Position_Register port map(X_target, clock, reg_en, RESET, X_
 Y_Target_Position: Position_Register port map(Y_target, clock, reg_en, RESET, Y_reg);
 
 -- Instance of Extender
-Extender_inst: Extender port map(clock, RESET, extender, ext_en, extender_pos,
+Extender_inst: Extender port map(clock, RESET, extender_press, ext_en, extender_pos,
 											ext_out, grap_en, clock_ext, LR);
 
 -- Bidir shift register to show status of extender
 Extender_Shift_Register: Extender_shift port map(clock, RESET, clock_ext, LR, extender_pos);
 
 -- Instance of Grappler
-Grappler_inst: Grappler_inst port map(clock, RESET, grappler, leds(1));
+Grappler_inst: Grappler port map(clock, RESET, grappler_press, grap_en, leds(1));
 
 END Circuit;
