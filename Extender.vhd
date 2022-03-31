@@ -75,7 +75,7 @@ BEGIN
 				END IF;
 
          WHEN full_ext =>		
-				IF(extender='1') THEN
+				IF(extender_en='1' and extender='0') THEN
 					next_state <= full_ext;
 				ELSE
 					next_state <= ext3;
@@ -89,14 +89,14 @@ BEGIN
 
 -- DECODER SECTION PROCESS
 
-Decoder_Section: PROCESS (current_state) 
+Decoder_Section: PROCESS (current_state, extender, extender_en) 
 
 BEGIN
     CASE current_state IS
          WHEN ret =>		
 			extender_out <= '0';
 			grappler_en <= '0';
-			IF(extender_en='1') THEN
+			IF(extender_en='1' AND extender='1') THEN
 				clk_en <= '1';
 			ELSE
 				clk_en <= '0';
@@ -139,7 +139,7 @@ BEGIN
 			extender_out <= '1';
 			grappler_en <= '1';
 			clk_en <= '0';
-			IF(extender_en='1') THEN
+			IF(extender_en='1' AND extender='0') THEN
 				clk_en <= '1';
 			ELSE
 				clk_en <= '0';
