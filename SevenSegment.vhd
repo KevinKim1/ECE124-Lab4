@@ -22,7 +22,7 @@ architecture decode_function1 of SevenSegment is
 --
 begin
    with hex select				--GFEDCBA        3210      -- data in   
-	sevenseg 				    <= "1000000" when "0000",    -- [0]
+	sevenseg 				    <= "0111111" when "0000",    -- [0]
 										 "0000110" when "0001",    -- [1]
 										 "1011011" when "0010",    -- [2]      +---- a -----+
 										 "1001111" when "0011",    -- [3]      |            |
@@ -34,8 +34,8 @@ begin
 										 "1101111" when "1001",    -- [9]      |            |
 										 "1110111" when "1010",    -- [A]      |            |
 										 "1111100" when "1011",    -- [b]      e            c
-										 "0100111" when "1100",    -- [c]      |            |
-										 "0000001" when "1101",    -- [d]      |            |
+										 "1011000" when "1100",    -- [c]      |            |
+										 "1011110" when "1101",    -- [d]      |            |
 										 "1111001" when "1110",    -- [E]      +---- d -----+
 										 "1110001" when "1111",    -- [F]
 										 "0000000" when others;    -- [ ]
