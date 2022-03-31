@@ -51,25 +51,35 @@ END COMPONENT;
 ------------------------------------------------------------------
 -- Add any Other Components here
 ------------------------------------------------------------------
-component Bidir_shift_reg port 
-(	
-	CLK				: in  std_logic := '0';
-	RESET 			: in  std_logic := '0';
-	CLK_EN			: in  std_logic := '0';
-	LEFT0_RIGHT1	: in  std_logic := '0';
-	REG_BITS			: out std_logic_vector(7 downto 0)
-);
-end component Bidir_shift_reg;
+--component Bidir_shift_reg port 
+--(	
+--	CLK				: in  std_logic := '0';
+--	RESET 			: in  std_logic := '0';
+--	CLK_EN			: in  std_logic := '0';
+--	LEFT0_RIGHT1	: in  std_logic := '0';
+--	REG_BITS			: out std_logic_vector(7 downto 0)
+--);
+--end component Bidir_shift_reg;
+--
+--component U_D_Bin_Counter4bit port 
+--(	
+--	CLK				: in  std_logic := '0';
+--	RESET 			: in  std_logic := '0';
+--	CLK_EN			: in  std_logic := '0';
+--	UP1_DOWN0		: in  std_logic := '0';
+--	COUNTER_BITS	: out std_logic_vector(7 downto 0)
+--);
+--end component U_D_Bin_Counter4bit;
 
-component U_D_Bin_Counter4bit port 
+component Counter4 is port 
 (	
 	CLK				: in  std_logic := '0';
 	RESET 			: in  std_logic := '0';
 	CLK_EN			: in  std_logic := '0';
 	UP1_DOWN0		: in  std_logic := '0';
-	COUNTER_BITS	: out std_logic_vector(7 downto 0)
+	COUNTER_BITS	: out std_logic_vector(3 downto 0)
 );
-end component U_D_Bin_Counter4bit;
+end component Counter4;
 
 component Inverter port 
 (
@@ -110,13 +120,13 @@ component Compx4 port
 );
 end component Compx4;
 
-component Extender_inst port
+component Extender port
 (
 	clk_input, reset, extender, extender_en		 : IN std_logic;
 	ext_pos												    : IN std_logic_vector(5 downto 2);
 	extender_out, grappler_en, clk_en, left_right : OUT std_logic
 );
-end component Extender_inst;
+end component Extender;
 
 component Extender_shift port
 (	
@@ -143,24 +153,36 @@ constant SIM_FLAG : boolean := TRUE; -- set to FALSE when compiling for FPGA dow
 ------------------------------------------------------------------	
 ------------------------------------------------------------------	
 -- Create any additional internal signals to be used
-signal clk_in, clock						     : std_logic; 		-- Internal clock
-signal RESET, motion, extender, grappler : std_logic; 		-- RAC modes
+signal clk_in, clock						     : std_logic; 							-- Internal clock
+signal RESET, motion, extender, grappler : std_logic; 							-- RAC modes
 signal X_target, Y_target 					  : std_logic_vector(3 downto 0);	-- New target XY positions
-signal XLT, XEQ, XGT, YLT, YEQ, YGT		  : std_logic;			-- XY position comparison outputs
-signal reg_en, ext_en						  : std_logic;			-- Enable signal for position registers and extender
-signal clk_x, clk_y							  : std_logic;			-- Clock signal for binary counters
-signal x_up_down, y_up_down				  : std_logic;			-- Increment or decrement signal for binary counters
+signal XLT, XEQ, XGT, YLT, YEQ, YGT		  : std_logic;								-- XY position comparison outputs
+signal reg_en, ext_en, grap_en			  : std_logic;								-- Enable signal for position registers, extender, and grappler
+signal clk_x, clk_y							  : std_logic;								-- Clock signal for binary counters
+signal x_up_down, y_up_down				  : std_logic;								-- Increment or decrement signal for binary counters
 
-signal ext_pos									  : std_logic_vector(5 downto 2);
-signal clock_ext								  : std_logic;
-signal left_right								  : std_logic;
-signal grappler_en							  : std_logic;
-signal extender_out							  : std_logic;
+signal X_pos, Y_pos		: std_logic_vector(3 downto 0); 	-- Current XY position output from binary counters
+signal X_reg, Y_reg		: std_logic_vector(3 downto 0);  -- Updated XY position output from position registers
+signal extender_pos		: std_logic_vector(5 downto 2); 	-- Indicator for extender's position
+signal clock_ext			: std_logic;							-- Clock signal for extender position shift register
+signal LR					: std_logic; 						 	-- Shift direction indicator
+signal ext_out				: std_logic; 							-- Indicator for retracted extender
 	
 BEGIN
 clk_in <= clk;
+xreg <= X_reg;
+yreg <= Y_reg;
+
+-- XY target position inputs to position storing registers
 X_target <= sw(7 downto 4);
 Y_target <= sw(3 downto 0);
+
+-- Simulation outputs for current XY position output from binary counters
+xPOS <= X_pos;
+yPOS <= Y_pos;
+
+-- Display 4 bit extender position to LED
+leds(5 downto 2) <= extender_pos;
 
 Clock_Selector: Clock_source port map(SIM_FLAG, clk_in, clock);
 
@@ -169,31 +191,32 @@ Inverter_Block: Inverter port map(pb_n(3), pb_n(2), pb_n(1),  pb_n(0),
 											 RESET,   motion,  extender, grappler);
 
 -- Instance of XY motion controller
-XY_Controller: XY_Motion port map( clock, RESET, motion, extender_out,
+XY_Controller: XY_Motion port map( clock, RESET, motion, ext_out,
 											  XLT, XEQ, XGT, YLT, YEQ, YGT,
 											  reg_en, clk_x, clk_y, 
 											  x_up_down, y_up_down,
 											  ext_en, leds(0));
 
+-- Increment/decrement current XY positions depending on comparison results with target position							  
+X_UD_Counter: Counter4 port map(clock, RESET, clk_x, x_up_down, X_pos);
+Y_UD_Counter: Counter4 port map(clock, RESET, clk_y, y_up_down, Y_pos);
+											  
 -- Compare target XY position with current XY position
-X_Comparator: Compx4 port map(xPOS, xreg, XGT, XEQ, XLT);
-Y_Comparator: Compx4 port map(yPOS, yreg, YGT, YEQ, YLT);
+X_Comparator: Compx4 port map(X_pos, X_reg, XGT, XEQ, XLT);
+Y_Comparator: Compx4 port map(Y_pos, Y_reg, YGT, YEQ, YLT);
 
 -- For storing and updating target XY position
-X_Target_Position: Position_Register port map( X_target, clock, reg_en, RESET, xreg);
-Y_Target_Position: Position_Register port map( Y_target, clock, reg_en, RESET, yreg);
+X_Target_Position: Position_Register port map(X_target, clock, reg_en, RESET, X_reg);
+Y_Target_Position: Position_Register port map(Y_target, clock, reg_en, RESET, Y_reg);
 
 -- Instance of Extender
-Extender_inst: Extender_inst port map(clock, RESET, extender, ext_en, ext_pos);
+Extender_inst: Extender port map(clock, RESET, extender, ext_en, extender_pos,
+											ext_out, grap_en, clock_ext, LR);
 
 -- Bidir shift register to show status of extender
-Extender_shift: Extender_shift port map(clock, RESET, clock_ext, left_right, ext_pos);
+Extender_Shift_Register: Extender_shift port map(clock, RESET, clock_ext, LR, extender_pos);
 
 -- Instance of Grappler
-Grappler_inst: Grappler_inst port map(clock, RESET, grappler, grappler_en);
-
--- TODO
---Shift_Register: Bidir_shift_reg port map(clock, --NOT(pb_n(0)), sw(0), sw(1), leds(7 downto 0));
---UD_Counter:		 U_D_Bin_Counter4bit port map(clock, --NOT(pb_n(0)), sw(0), sw(1), leds(7 downto 0));
+Grappler_inst: Grappler_inst port map(clock, RESET, grappler, leds(1));
 
 END Circuit;
