@@ -6,16 +6,16 @@ use IEEE.numeric_std.all;
 Entity Position_Register is port 
 (	
 	input_pos		: in  std_logic_vector(3 downto 0);		-- New XY target position
-	CLOCK				: in  std_logic;						-- Clock for register operations
-	ENABLE  			: in  std_logic;						-- Register stores new XY target position when 1
-	RESET 			: in  std_logic;							-- Register value resets when 1
+	CLOCK				: in  std_logic;								-- Clock for register operations
+	ENABLE  			: in  std_logic;								-- Register stores new XY target position when 1
+	RESET 			: in  std_logic;								-- Register value resets when 1
 	output_pos		: out std_logic_vector(3 downto 0)		-- Output target position for comparator
 );
 end Entity;
 
 architecture one of Position_Register is
 
-signal stored		: std_logic_vector(3 downto 0);
+signal stored		: std_logic_vector(3 downto 0); 			-- Temporary signal holds new target pos
 
 begin
 
