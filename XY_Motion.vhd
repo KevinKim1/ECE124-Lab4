@@ -129,10 +129,24 @@ begin
 					
 				else	
 					Capture_XY <= '0';
-					clk_en_x <= '1';
-					clk_en_y <= '1';
-					up_down_x <= X_LT;
-					up_down_y <= Y_LT;					
+														
+					if((X_LT = '1') or (X_GT = '1')) then
+						clk_en_x <= '1';
+						up_down_x <= X_LT;
+						
+					else
+						clk_en_x <= '0';
+						up_down_x <= '0';
+					end if;
+				
+					if((Y_LT = '1') or (Y_GT = '1')) then
+						clk_en_y <= '1';
+						up_down_y <= Y_LT;
+						
+					else
+						clk_en_y <= '0';
+						up_down_y <= '0';
+					end if;
 					
 				end if;
 				
