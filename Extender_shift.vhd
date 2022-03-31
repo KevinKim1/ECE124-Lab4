@@ -10,13 +10,13 @@ Entity Extender_shift is port
 	reset 			: in  std_logic;
 	clk_en			: in  std_logic;
 	left_right	   : in  std_logic;
-	ext_pos			: out std_logic_vector(5 downto 2)
+	ext_pos			: out std_logic_vector(3 downto 0)
 );
 end Entity;
 
 ARCHITECTURE one OF Extender_shift IS
 
-Signal sreg			: std_logic_vector(5 downto 2);
+Signal sreg			: std_logic_vector(3 downto 0);
 
 BEGIN
 

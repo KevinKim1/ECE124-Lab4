@@ -106,7 +106,7 @@ end component XY_Motion;
 component Position_Register port 
 (	
 	input_pos		: in  std_logic_vector(3 downto 0);		
-	CLK				: in  std_logic;								
+	CLOCK				: in  std_logic;								
 	ENABLE  			: in  std_logic;								
 	RESET 			: in  std_logic;								
 	output_pos		: out std_logic_vector(3 downto 0)		
@@ -164,7 +164,7 @@ signal x_up_down, y_up_down				  	: std_logic;								-- Increment or decrement 
 
 signal X_pos, Y_pos		: std_logic_vector(3 downto 0); 	-- Current XY position output from binary counters
 signal X_reg, Y_reg		: std_logic_vector(3 downto 0);  -- Updated XY position output from position registers
-signal extender_pos		: std_logic_vector(5 downto 2); 	-- Indicator for extender's position
+signal extender_pos		: std_logic_vector(3 downto 0); 	-- Indicator for extender's position
 signal clock_ext			: std_logic;							-- Clock signal for extender position shift register
 signal LR					: std_logic; 						 	-- Shift direction indicator
 signal ext_out				: std_logic; 							-- Indicator for retracted extender
