@@ -78,6 +78,21 @@ component Inverter port
 );
 end component Inverter;
 
+component XY_Motion is port (
+	clk_input, reset  : in std_logic;  		-- Clock and reset for XY motion controller operations
+	motion				: in std_logic;  		-- RAC moving when 1, RAC stopped when 0
+	extender_out		: in std_logic;  		-- Extender is NOT retracted (0000) when 1
+	X_LT, X_EQ, X_GT  : in std_logic;  		-- Comparison between target XY pos held in registers and current XY pos held in binary counter
+	Y_LT, Y_EQ, Y_GT	: in std_logic;  
+	
+	Capture_XY				: out std_logic;	-- Tells register to capture new XY pos target when 1
+	clk_en_x, clk_en_y 	: out std_logic;	-- Rising edge of clock signal triggers binary counter operations
+	up_down_x, up_down_y	: out std_logic;	-- Increment/decrement current XY pos depending on comparator outputs
+	extender_en				: out std_logic;	-- Tells extender that it is okay to extend from the XY motion controller side when 1
+	error						: out std_logic	-- System fault error state
+);
+end component XY_Motion;
+
 component Position_Register port 
 (	
 	input_pos		: in  std_logic_vector(3 downto 0);		
@@ -95,13 +110,13 @@ component Compx4 port
 );
 end component Compx4;
 
-component Extender port
+component Extender_inst port
 (
 	clk_input, reset, extender, extender_en		 : IN std_logic;
 	ext_pos												    : IN std_logic_vector(5 downto 2);
 	extender_out, grappler_en, clk_en, left_right : OUT std_logic
 );
-end component Extender;
+end component Extender_inst;
 
 component Extender_shift port
 (	
@@ -113,12 +128,12 @@ component Extender_shift port
 );
 END component Extender_shift;
 
-component Grappler port
+component Grappler_inst port
 (
 	clk_input, reset, grappler, grappler_en	: IN std_logic;
 	grappler_on											: OUT std_logic
 );
-END component Grappler;
+END component Grappler_inst;
 
 ------------------------------------------------------------------
 -- provided signals
@@ -169,16 +184,16 @@ X_Target_Position: Position_Register port map( X_target, clock, reg_en, RESET, x
 Y_Target_Position: Position_Register port map( Y_target, clock, reg_en, RESET, yreg);
 
 -- Instance of Extender
-Extender: Extender port map(clock, RESET, extender, ext_en, ext_pos);
+Extender_inst: Extender_inst port map(clock, RESET, extender, ext_en, ext_pos);
 
 -- Bidir shift register to show status of extender
 Extender_shift: Extender_shift port map(clock, RESET, clock_ext, left_right, ext_pos);
 
 -- Instance of Grappler
-Grappler: Grappler port map(clock, RESET, grappler, grappler_en);
+Grappler_inst: Grappler_inst port map(clock, RESET, grappler, grappler_en);
 
 -- TODO
-Shift_Register: Bidir_shift_reg port map(clock, --NOT(pb_n(0)), sw(0), sw(1), leds(7 downto 0));
-UD_Counter:		 U_D_Bin_Counter4bit port map(clock, --NOT(pb_n(0)), sw(0), sw(1), leds(7 downto 0));
+--Shift_Register: Bidir_shift_reg port map(clock, --NOT(pb_n(0)), sw(0), sw(1), leds(7 downto 0));
+--UD_Counter:		 U_D_Bin_Counter4bit port map(clock, --NOT(pb_n(0)), sw(0), sw(1), leds(7 downto 0));
 
 END Circuit;
