@@ -19,6 +19,8 @@ END ENTITY;
 
  
  SIGNAL current_state, next_state	:  STATE_NAMES;     	-- signals of type STATE_NAMES
+ 
+ shared variable direction : std_logic := '0';
 
 
 BEGIN
@@ -34,7 +36,7 @@ BEGIN
 	IF (reset = '1') THEN
 		current_state <= ret;
 	ELSIF(rising_edge(clk_input)) THEN
-		current_state <= next_State;
+		current_state <= next_state;
 	END IF;
 END PROCESS;	
 
@@ -49,36 +51,38 @@ BEGIN
          WHEN ret =>
 				IF(extender='1' AND extender_en='1') THEN
 					next_state <= ext1;
+					direction := '1';
 				ELSE
 					next_state <= ret;
 				END IF;
 
          WHEN ext1 =>
-				IF(extender='1') THEN
+				IF(direction='1') THEN
 					next_state <= ext2;
 				ELSE
 					next_state <= ret;
 				END IF;
 
          WHEN ext2 =>		
-				IF(extender='1') THEN
+				IF(direction='1') THEN
 					next_state <= ext3;
 				ELSE
 					next_state <= ext1;
 				END IF;
 				
          WHEN ext3 =>		
-				IF(extender='1') THEN
+				IF(direction='1') THEN
 					next_state <= full_ext;
 				ELSE
 					next_state <= ext2;
 				END IF;
 
          WHEN full_ext =>		
-				IF(extender='1') THEN
-					next_state <= full_ext;
-				ELSE
+				IF(extender_en='1' and extender='0') THEN
 					next_state <= ext3;
+					direction := '0';
+				ELSE
+					next_state <= full_ext;
 				END IF;
 
 			WHEN OTHERS =>
@@ -89,14 +93,14 @@ BEGIN
 
 -- DECODER SECTION PROCESS
 
-Decoder_Section: PROCESS (current_state) 
+Decoder_Section: PROCESS (current_state, extender, extender_en) 
 
 BEGIN
     CASE current_state IS
          WHEN ret =>		
 			extender_out <= '0';
 			grappler_en <= '0';
-			IF(extender_en='1') THEN
+			IF(extender_en='1' AND extender='1') THEN
 				clk_en <= '1';
 			ELSE
 				clk_en <= '0';
@@ -105,7 +109,7 @@ BEGIN
          WHEN ext1 =>		
 			extender_out <= '1';
 			grappler_en <= '0';
-			IF(extender='1') THEN
+			IF(direction='1') THEN
 				clk_en <= '1';
 				left_right <= '1';
 			ELSE
@@ -116,7 +120,7 @@ BEGIN
          WHEN ext2 =>		
 			extender_out <= '1';
 			grappler_en <= '0';
-			IF(extender='1') THEN
+			IF(direction='1') THEN
 				clk_en <= '1';
 				left_right <= '1';
 			ELSE
@@ -127,7 +131,7 @@ BEGIN
          WHEN ext3 =>		
 			extender_out <= '1';
 			grappler_en <= '0';
-			IF(extender='1') THEN
+			IF(direction='1') THEN
 				clk_en <= '1';
 				left_right <= '1';
 			ELSE
@@ -139,7 +143,7 @@ BEGIN
 			extender_out <= '1';
 			grappler_en <= '1';
 			clk_en <= '0';
-			IF(extender_en='1') THEN
+			IF(extender_en='1' AND extender='0') THEN
 				clk_en <= '1';
 			ELSE
 				clk_en <= '0';
