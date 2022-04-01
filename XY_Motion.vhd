@@ -60,13 +60,9 @@ begin
 				if ((X_EQ = '0') OR (Y_EQ = '0')) then
 					next_state <= s_motion_btn_inactive;
 			
-				-- Moving RAC reached target XY pos									------------- NECESSRAY?
+				-- Moving RAC reached target XY pos									
 				elsif ((X_EQ = '1') AND (Y_EQ = '1')) then
 					next_state <= s_stop;
-			
-				-- Somehow, if extender is extending while RAC is in motion  ------------ NECESSARY?
-				elsif ((extender_out = '1')) then
-					next_state <= s_error;
 				end if; 		
 	
 			when s_motion_btn_inactive =>
