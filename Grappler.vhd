@@ -53,7 +53,7 @@ BEGIN
 				END IF;
 
          WHEN s_close =>		
-				IF(grappler='0' AND grappler_en='1') THEN
+				IF(grappler='1' AND grappler_en='1') THEN
 					next_state <= s_open;
 				ELSE
 					next_state <= s_close;

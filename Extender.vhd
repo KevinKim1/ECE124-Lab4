@@ -78,7 +78,7 @@ BEGIN
 				END IF;
 
          WHEN full_ext =>		
-				IF(extender_en='1' and extender='0') THEN
+				IF(extender_en='1' and extender='1') THEN
 					next_state <= ext3;
 					direction := '0';
 				ELSE
@@ -102,12 +102,14 @@ BEGIN
 			grappler_en <= '0';
 			IF(extender_en='1' AND extender='1') THEN
 				clk_en <= '1';
+				left_right <= '1';
 			ELSE
 				clk_en <= '0';
+				left_right <= '0';
 			END IF;
 			
          WHEN ext1 =>		
-			extender_out <= '1';
+			extender_out <= '0';
 			grappler_en <= '0';
 			IF(direction='1') THEN
 				clk_en <= '1';
@@ -143,9 +145,11 @@ BEGIN
 			extender_out <= '1';
 			grappler_en <= '1';
 			clk_en <= '0';
-			IF(extender_en='1' AND extender='0') THEN
+			IF(extender_en='1' AND extender='1') THEN
+				left_right <= '0';
 				clk_en <= '1';
 			ELSE
+				left_right <= '1';
 				clk_en <= '0';
 			END IF;
 				

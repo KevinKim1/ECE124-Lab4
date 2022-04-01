@@ -168,6 +168,8 @@ signal extender_pos		: std_logic_vector(3 downto 0); 	-- Indicator for extender'
 signal clock_ext			: std_logic;							-- Clock signal for extender position shift register
 signal LR					: std_logic; 						 	-- Shift direction indicator
 signal ext_out				: std_logic; 							-- Indicator for retracted extender
+
+signal x_connector, y_connector		: std_logic_vector(6 downto 0);
 	
 BEGIN
 clk_in <= clk;
@@ -187,9 +189,14 @@ leds(5 downto 2) <= extender_pos;
 
 Clock_Selector: Clock_source port map(SIM_FLAG, clk_in, clock);
 
--- Invert RAC mode pins
+-- Invert RAC mode pins (for sims)
 Inverter_Block: Inverter port map(pb_n(3), pb_n(2), pb_n(1),  pb_n(0),
 											 RESET,   motion,  extender_press, grappler_press);
+
+-- For LogicalStep board
+--Inverter_Block: Inverter port map('1', pb_n(2), pb_n(1),  pb_n(0),
+--											 RESET,   motion,  extender_press, grappler_press);
+
 
 -- Instance of XY motion controller
 XY_Controller: XY_Motion port map( clock, RESET, motion, ext_out,
@@ -219,5 +226,10 @@ Extender_Shift_Register: Extender_shift port map(clock, RESET, clock_ext, LR, ex
 
 -- Instance of Grappler
 Grappler_inst: Grappler port map(clock, RESET, grappler_press, grap_en, leds(1));
+
+--Seven_Segment_X: SevenSegment port map(x_Pos, x_connector);
+--Seven_Segment_Y: SevenSegment port map(y_Pos, y_connector);
+
+--Seven_Segment_mux: segment7_mux port map(clk_in, y_connector, x_connector, seg7_data, seg7_char2, seg7_char1);
 
 END Circuit;

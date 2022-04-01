@@ -70,7 +70,7 @@ begin
 			
 				-- RAC, no ext
 				------------------------------------------------------------------------------------------ CHECK MOTION/EXTENDER_OUT
-				if ((X_EQ = '0') OR (Y_EQ = '0')) then
+				if (((X_EQ = '0') OR (Y_EQ = '0')) AND (extender_out = '0')) then
 					next_state <= s_motion;
 			
 				-- No RAC, no ext
@@ -82,7 +82,7 @@ begin
 					next_state <= s_stop;
 					
 				-- No RAC, ext, but motion
-				elsif ((X_EQ = '1') AND (Y_EQ = '1') AND (extender_out = '1') AND (motion = '1')) then
+				elsif ((X_EQ = '0') AND (Y_EQ = '0') AND (extender_out = '1') AND (motion = '1')) then
 					next_state <= s_error;
 					
 				end if;
@@ -127,7 +127,7 @@ begin
 					up_down_x <= '0';
 					up_down_y <= '0';
 					
-				else	
+				else
 					Capture_XY <= '0';
 														
 					if((X_LT = '1') or (X_GT = '1')) then
@@ -162,12 +162,13 @@ begin
 				
 				if (extender_out = '1') then
 					Capture_XY <= '0';
+					
 				elsif (motion = '1') then
 					Capture_XY <= '1';
 				end if;
 				
          when s_error =>		
-			
+				extender_en <= '1';
 				-- Extender fully retracted
 				if(extender_out = '0') then
 					error <= '0';
