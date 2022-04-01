@@ -22,9 +22,7 @@ architecture one of XY_Motion is
 
 -- Five scenarios that the XY motion controller can be in
 type state_names is (s_initial, s_motion_btn_active, s_motion_btn_inactive, s_stop, s_error);		
-
--- XY motion states
-signal current_state, next_state 	: state_names; 				
+signal current_state, next_state  : state_names; 				
 
 begin
 
@@ -41,64 +39,49 @@ end process;
 
 Transition_Section: process (X_LT, X_EQ, X_GT, Y_LT, Y_EQ, Y_GT, current_state, motion, extender_out)
 begin
-    case current_state is -- Maps to other states
+    case current_state is
 	 
-         when s_initial =>	
-				
-				-- RAC reached target pos, motion button independant
-				if ((X_EQ = '1') AND (Y_EQ = '1')) then
+         when s_initial =>											-- After reset signal
+				if ((X_EQ = '1') AND (Y_EQ = '1')) then		-- Target XY pos is not updated
 					next_state <= s_stop;
-		
-				-- RAC is updated to new XY target pos, and extender is not out
-				elsif (motion = '1') then
+	
+				elsif (motion = '1') then							-- Target XY pos update is initiated
 					next_state <= s_motion_btn_active;		
 				end if; 
 				
-			when s_motion_btn_active =>
-				
-				-- Target XY pos updated to initiate movement
-				if ((X_EQ = '0') OR (Y_EQ = '0')) then
+			when s_motion_btn_active =>							-- State for updating target XY pos when motion button is pressed
+				if ((X_EQ = '0') OR (Y_EQ = '0')) then			-- Target XY pos is updated to initiate movement
 					next_state <= s_motion_btn_inactive;
-			
-				-- Moving RAC reached target XY pos									
-				elsif ((X_EQ = '1') AND (Y_EQ = '1')) then
+												
+				elsif ((X_EQ = '1') AND (Y_EQ = '1')) then	-- If RAC reached target XY pos before motion button is released
 					next_state <= s_stop;
 				end if; 		
 	
-			when s_motion_btn_inactive =>
-			
-				-- RAC has not reached either X or Y pos, or haven't reached both
-				if ((X_EQ = '0') OR (Y_EQ = '0')) then
+			when s_motion_btn_inactive =>							-- State for RAC motion after button is released
+				if ((X_EQ = '0') OR (Y_EQ = '0')) then			-- RAC has not reached either X or Y pos, or haven't reached both
 					next_state <= s_motion_btn_inactive;
 				
-				-- Moving RAC reached target XY pos
-				elsif ((X_EQ = '1') AND (Y_EQ = '1')) then
+				elsif ((X_EQ = '1') AND (Y_EQ = '1')) then	-- Moving RAC reached target XY pos
 					next_state <= s_stop;
 				end if;	
 				
-         when s_stop =>
-		
-				-- RAC idling or extender extending
-				if ((X_EQ = '1') AND (Y_EQ = '1') AND (motion = '0')) then
+         when s_stop =>																	-- State when RAC reached target XY pos
+				if ((X_EQ = '1') AND (Y_EQ = '1') AND (motion = '0')) then  -- RAC idling or extender extending
 					next_state <= s_stop;
 					
-				-- Motion triggered while extender extending
-				elsif ((extender_out = '1') AND (motion = '1')) then
+				elsif ((extender_out = '1') AND (motion = '1')) then			-- Motion attempted while extender extending
 					next_state <= s_error;
 					
-				-- Motion initiated after target XY pos is reached and extender is not extending
+				-- Motion attempted after target XY pos is reached and extender is not extending
 				elsif ((X_EQ = '1') AND (Y_EQ = '1') AND (extender_out = '0') AND (motion = '1')) then
 					next_state <= s_motion_btn_active;
 				end if;
 				
          when s_error =>	
-			
-				-- Extender fully retracted
-				if (extender_out = '0') then
+				if (extender_out = '0') then		-- Extender fully retracted
 					next_state <= s_stop;
 					
-				-- Extender is not done retracting
-				else 
+				else										-- Extender is not done retracting 
 					next_state <= s_error;
 				end if;
 			
@@ -109,9 +92,7 @@ Decoder_Section: process (X_LT, X_EQ, X_GT, Y_LT, Y_EQ, Y_GT, current_state, mot
 begin
     case current_state is
 	 
-         when s_initial =>	
-			
-				-- Initial state after reset
+         when s_initial =>					-- Initial state after reset
 				extender_en <= '0';
 				error <= '0';
 				Capture_XY <= '0';
@@ -119,9 +100,8 @@ begin
 				clk_en_y <= '0';
 				up_down_x <= '0';
 				up_down_y <= '0';
-				
-         when s_motion_btn_active =>		
-				
+					
+         when s_motion_btn_active =>	-- Enable position register to caputre target, nothing else
 				extender_en <= '0';
 				error <= '0';
 				Capture_XY <= '1';
@@ -131,31 +111,28 @@ begin
 				up_down_y <= '0';
 			
 			when s_motion_btn_inactive =>	
-				
-				extender_en <= '0';
+				-- Let if-else stateents below infer these signal assignments as the default case for this state
+				extender_en <= '0';								
 				error <= '0';
 				Capture_XY <= '0';
 				
-				if((X_LT = '1') or (X_GT = '1')) then
+				if((X_LT = '1') or (X_GT = '1')) then		-- Inform X binary counter accordingly if X target is not met
 					clk_en_x <= '1';
-					up_down_x <= X_LT;
-						
+					up_down_x <= X_LT;	
 				else
 					clk_en_x <= '0';
 					up_down_x <= '0';
 				end if;
 				
-				if((Y_LT = '1') or (Y_GT = '1')) then
+				if((Y_LT = '1') or (Y_GT = '1')) then		-- Inform Y binary counter accordingly if Y target is not met
 					clk_en_y <= '1';
 					up_down_y <= Y_LT;
-					
 				else
 					clk_en_y <= '0';
 					up_down_y <= '0';
 				end if;
 								
-         when s_stop =>		
-				
+         when s_stop =>						-- Enable extender, nothing else
 				extender_en <= '1';
 				error <= '0';
 				clk_en_x <= '0';
@@ -164,19 +141,18 @@ begin
 				up_down_y <= '0';
 				
          when s_error =>		
+				-- Error state only occurs after stop state. Let if-else stateents below infer theis signal assignment 
+				-- as the default case for the error state. Also infer any output signals that have no assignment from the stop state.
 				extender_en <= '1';
 				
-				-- Extender fully retracted
-				if(extender_out = '0') then
+				if(extender_out = '0') then	-- Extender fully retracted
 					error <= '0';
-					
 				else 
 					error <= '1';
 				end if;
 				
 	end case;
 end process;
-
 end one;
  
  
