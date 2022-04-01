@@ -20,8 +20,11 @@ end XY_Motion;
 
 architecture one of XY_Motion is
 
-type state_names is (s_initial, s_motion, s_stop, s_error);		-- Four states that the XY motion controller can be in
-signal current_state, next_state 	: state_names; 				-- XY motion states
+-- Five scenarios that the XY motion controller can be in
+type state_names is (s_initial, s_motion_btn_active, s_motion_btn_inactive, s_stop, s_error);		
+
+-- XY motion states
+signal current_state, next_state 	: state_names; 				
 
 begin
 
@@ -47,44 +50,49 @@ begin
 					next_state <= s_stop;
 		
 				-- RAC is updated to new XY target pos, and extender is not out
-				else
-					next_state <= s_motion;		
+				elsif (motion = '1') then
+					next_state <= s_motion_btn_active;		
 				end if; 
 				
-			when s_motion =>
+			when s_motion_btn_active =>
+				
+				-- Target XY pos updated to initiate movement
+				if ((X_EQ = '0') OR (Y_EQ = '0')) then
+					next_state <= s_motion_btn_inactive;
 			
-				-- Moving RAC reached target XY pos
-				if ((X_EQ = '1') AND (Y_EQ = '1')) then
+				-- Moving RAC reached target XY pos									------------- NECESSRAY?
+				elsif ((X_EQ = '1') AND (Y_EQ = '1')) then
 					next_state <= s_stop;
 			
-				-- Somehow, if extender is extending while RAC is in motion
+				-- Somehow, if extender is extending while RAC is in motion  ------------ NECESSARY?
 				elsif ((extender_out = '1')) then
 					next_state <= s_error;
-					
+				end if; 		
+	
+			when s_motion_btn_inactive =>
+			
 				-- RAC has not reached either X or Y pos, or haven't reached both
-				else
-					next_state <= s_motion;
-				end if; 					
+				if ((X_EQ = '0') OR (Y_EQ = '0')) then
+					next_state <= s_motion_btn_inactive;
+				
+				-- Moving RAC reached target XY pos
+				elsif ((X_EQ = '1') AND (Y_EQ = '1')) then
+					next_state <= s_stop;
+				end if;	
 				
          when s_stop =>
-			
-				-- RAC, no ext
-				------------------------------------------------------------------------------------------ CHECK MOTION/EXTENDER_OUT
-				if (((X_EQ = '0') OR (Y_EQ = '0')) AND (extender_out = '0')) then
-					next_state <= s_motion;
-			
-				-- No RAC, no ext
-				elsif ((X_EQ = '1') AND (Y_EQ = '1') AND (extender_out = '0')) then
-					next_state <= s_stop;
-				
-				-- No RAC, ext
-				elsif ((X_EQ = '1') AND (Y_EQ = '1') AND (extender_out='1')) then
+		
+				-- RAC idling or extender extending
+				if ((X_EQ = '1') AND (Y_EQ = '1') AND (motion = '0')) then
 					next_state <= s_stop;
 					
-				-- No RAC, ext, but motion
-				elsif ((X_EQ = '0') AND (Y_EQ = '0') AND (extender_out = '1') AND (motion = '1')) then
+				-- Motion triggered while extender extending
+				elsif ((extender_out = '1') AND (motion = '1')) then
 					next_state <= s_error;
 					
+				-- Motion initiated after target XY pos is reached and extender is not extending
+				elsif ((X_EQ = '1') AND (Y_EQ = '1') AND (extender_out = '0') AND (motion = '1')) then
+					next_state <= s_motion_btn_active;
 				end if;
 				
          when s_error =>	
@@ -116,41 +124,40 @@ begin
 				up_down_x <= '0';
 				up_down_y <= '0';
 				
-         when s_motion =>		
+         when s_motion_btn_active =>		
 				
 				extender_en <= '0';
 				error <= '0';
-				if (motion = '1') then
-					Capture_XY <= '1';
-					clk_en_x <= '0';
-					clk_en_y <= '0';
-					up_down_x <= '0';
-					up_down_y <= '0';
-					
-				else
-					Capture_XY <= '0';
-														
-					if((X_LT = '1') or (X_GT = '1')) then
-						clk_en_x <= '1';
-						up_down_x <= X_LT;
-						
-					else
-						clk_en_x <= '0';
-						up_down_x <= '0';
-					end if;
+				Capture_XY <= '1';
+				clk_en_x <= '0';
+				clk_en_y <= '0';
+				up_down_x <= '0';
+				up_down_y <= '0';
+			
+			when s_motion_btn_inactive =>	
 				
-					if((Y_LT = '1') or (Y_GT = '1')) then
-						clk_en_y <= '1';
-						up_down_y <= Y_LT;
+				extender_en <= '0';
+				error <= '0';
+				Capture_XY <= '0';
+				
+				if((X_LT = '1') or (X_GT = '1')) then
+					clk_en_x <= '1';
+					up_down_x <= X_LT;
 						
-					else
-						clk_en_y <= '0';
-						up_down_y <= '0';
-					end if;
-					
+				else
+					clk_en_x <= '0';
+					up_down_x <= '0';
 				end if;
 				
-				
+				if((Y_LT = '1') or (Y_GT = '1')) then
+					clk_en_y <= '1';
+					up_down_y <= Y_LT;
+					
+				else
+					clk_en_y <= '0';
+					up_down_y <= '0';
+				end if;
+								
          when s_stop =>		
 				
 				extender_en <= '1';
@@ -160,15 +167,9 @@ begin
 				up_down_x <= '0';
 				up_down_y <= '0';
 				
-				if (extender_out = '1') then
-					Capture_XY <= '0';
-					
-				elsif (motion = '1') then
-					Capture_XY <= '1';
-				end if;
-				
          when s_error =>		
 				extender_en <= '1';
+				
 				-- Extender fully retracted
 				if(extender_out = '0') then
 					error <= '0';
