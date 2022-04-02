@@ -82,5 +82,4 @@ begin
 				grappler_on <= '0';
 	end case;
 end process;
-
 end architecture one;
